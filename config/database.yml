@@ -23,6 +23,8 @@ default: &default
 
 development:
   <<: *default
+  port: <%= ENV["POSTGRES_PORT"] %>
+  host: <%= ENV["POSTGRES_HOST"] %>
   database: iDing_development
 
   # The specified database role being used to connect to postgres.
