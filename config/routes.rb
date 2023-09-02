@@ -28,4 +28,6 @@ Rails.application.routes.draw do
   resources :reservations, only: :destroy
 
   get '/success_page/:reservation_id', to: 'build#success_page', as: :success_page
+
+  get "/sw.js", to: redirect('/404.html')
 end
