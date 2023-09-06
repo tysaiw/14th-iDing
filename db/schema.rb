@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_08_28_110237) do
+ActiveRecord::Schema[7.0].define(version: 2023_09_02_085825) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -48,6 +48,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_28_110237) do
     t.string "tel", null: false
     t.datetime "deleted_at"
     t.bigint "table_id"
+    t.string "state", default: "reserved"
     t.index ["deleted_at"], name: "index_reservations_on_deleted_at"
     t.index ["restaurant_id"], name: "index_reservations_on_restaurant_id"
     t.index ["table_id"], name: "index_reservations_on_table_id"
@@ -77,6 +78,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_28_110237) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "restaurant_id", null: false
+    t.integer "site_x", default: 1
+    t.integer "site_y", default: 1
     t.index ["restaurant_id"], name: "index_tables_on_restaurant_id"
   end
 

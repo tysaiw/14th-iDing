@@ -23,9 +23,7 @@ class RestaurantsController < ApplicationController
         reservations_count = @restaurant.reservations.where(date: selected_date, time: begin_time..end_time).count
         available_tables = @restaurant.tables.count - reservations_count
 
-        if available_tables.positive?
-          @timerange << Time.at(time).utc.strftime('%R')
-        end
+        @timerange << Time.at(time).utc.strftime('%R') if available_tables.positive?
       end
     end
     render json: { timerange: @timerange }
@@ -42,6 +40,7 @@ class RestaurantsController < ApplicationController
   def time_slot
     time_periods = @restaurant.open_times.pluck(:start_time, :end_time)
     @time_period = time_periods.map { |start_time, end_time| start_time.to_i..end_time.to_i }
+    @time_period = @time_period.sort_by { |range| range&.begin }
   end
 
   def set_timelist

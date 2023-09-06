@@ -21,13 +21,12 @@
 #
 class Reservation < ApplicationRecord
   acts_as_paranoid
+  include AASM
 
   belongs_to :restaurant
   belongs_to :table, optional: true
 
-  after_save :update_table_status
-  before_destroy :free_up_table
-  before_save :valid_total_guests
+  before_create :valid_total_guests
 
   validates :date, presence: true
   validates :time, presence: true
@@ -42,24 +41,24 @@ class Reservation < ApplicationRecord
       .order(:date, :time)
   }
 
-  private
+  aasm column: :state do
+    state :reserved, initial: true
+    state :keeped, :used, :completed, :cancelled
 
-  def update_table_status
-    table.update(status: 'occupied') if table_id.present?
-  end
+    event :keep do
+      transitions from: :reserved, to: :keeped
+    end
 
-  def free_up_table
-    table.update(status: 'vacant') if table.present?
-  end
+    event :use do
+      transitions from: %i[reserved keeped], to: :used, after: :update_table_status_to_occupied
+    end
 
-  def valid_total_guests
-    total_guests = adults + kids
-    vacant_table = restaurant.tables.where(status: 'vacant').where('seat_num >= ?', total_guests).first
+    event :complete do
+      transitions from: :used, to: :completed, after: :update_table_status_to_vacant
+    end
 
-    if vacant_table
-      self.table = vacant_table
-    else
-      errors.add(:base, '無法找到合適的空桌')
+    event :cancel do
+      transitions from: %i[reserved keeped], to: :cancelled
     end
   end
 
@@ -82,5 +81,45 @@ class Reservation < ApplicationRecord
 
   ransacker :name_or_tel_cont do
     Arel::Nodes::NamedFunction.new('CONCAT_WS', [Arel::Nodes.build_quoted(' '), arel_table[:name], arel_table[:tel]])
+  end
+
+  def valid_total_guests
+    total_guests = adults + kids
+    suitable_table = find_suitable_table(total_guests, date, time)
+
+    if suitable_table
+      self.table = suitable_table
+    else
+      self.table = nil
+      errors.add(:base, '無法找到合適的空桌')
+      false
+    end
+  end
+
+  def find_suitable_table(guests, reservation_date, reservation_time)
+    @mealtime = restaurant.mealtime.minutes
+    hour_before = reservation_time - @mealtime + 1
+    hour_after = reservation_time + @mealtime - 1
+
+    restaurant.tables
+              .where('seat_num >= ?', guests)
+              .where.not(id: reserved_table_within_time_range(reservation_date, hour_before, hour_after))
+              .first
+  end
+
+  def reserved_table_within_time_range(date, start_time, end_time)
+    reserved_tables = Reservation
+                      .where(date:, time: start_time..end_time)
+                      .pluck(:table_id)
+
+    reserved_tables.uniq
+  end
+
+  def update_table_status_to_occupied
+    table.occupied! if table.present? && table.may_occupied?
+  end
+
+  def update_table_status_to_vacant
+    table.vacant! if table.present? && table.may_vacant?
   end
 end

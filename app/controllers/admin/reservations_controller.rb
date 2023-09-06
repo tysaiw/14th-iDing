@@ -10,11 +10,14 @@ module Admin
       @reservations = @search.result
     end
 
+    def calendar; end
+
     def create
       @reservation = @restaurant.reservations.new(reservation_params)
 
       if @reservation.save
         redirect_to admin_restaurant_path(@restaurant), notice: '訂位新增成功'
+        SendSmsJob.perform_later(@reservation)
       else
         redirect_to admin_restaurant_path(@restaurant), alert: '訂位失敗'
       end
@@ -31,6 +34,7 @@ module Admin
     end
 
     def destroy
+      @reservation.cancel! if @reservation.may_cancel?
       @reservation.destroy
       redirect_to admin_restaurant_path(@restaurant), notice: '訂位刪除成功'
     end
@@ -39,7 +43,7 @@ module Admin
 
     def reservation_params
       params.require(:reservation)
-            .permit(:name, :tel, :email, :gender, :date, :time, :adults, :kids, :purpose, :note, :serial, :table_id)
+            .permit(:name, :tel, :email, :gender, :date, :time, :adults, :kids, :purpose, :note, :serial, :table_id, :state)
     end
 
     def set_restaurant
