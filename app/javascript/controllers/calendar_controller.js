@@ -11,9 +11,9 @@ export default class extends Controller {
   static values = { restaurantId: Number };
   connect() {
     const calendarEl = document.getElementById("calendar");
+    let redirectToUrl = `/admin/restaurants/${this.restaurantIdValue}`;
     const calendar = new Calendar(calendarEl, {
       locale: zhLocale,
-      navLinks: true,
       plugins: [
         interactionPlugin__default,
         dayGridPlugin,
@@ -22,9 +22,9 @@ export default class extends Controller {
         multiMonthPlugin,
       ],
       headerToolbar: {
-        left: "prev,next today",
+        left: "prev,next",
         center: "title",
-        right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+        right: "today",
       },
       timeZone: "UTC",
       events: `/api/v1/restaurants/${this.restaurantIdValue}/reservations`,
@@ -33,6 +33,14 @@ export default class extends Controller {
         minute: "2-digit",
         meridiem: false,
         hour12: false,
+      },
+      navLinks: true,
+      navLinkDayClick: function (date, event) {
+        event.preventDefault();
+        let year = date.getFullYear();
+        let month = (date.getMonth() + 1).toString().padStart(2, "0");
+        let day = date.getDate().toString().padStart(2, "0");
+        window.location.href = redirectToUrl + `?date=${year}-${month}-${day}`;
       },
     });
     calendar.render();
